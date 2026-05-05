@@ -22,26 +22,30 @@ public class ChatService {
 
     public ChatResponse chat(ChatRequest chatRequest) {
 
-        String systemPrompt = personalityService.setPersonality(chatRequest.personality());
+        String systemPrompt = personalityService.getSystemPrompt(chatRequest.personality());
 
         var history = memoryService.getHistory(chatRequest.sessionId());
 
         String userMessage = chatRequest.message();
 
-        ChatPayload chatPayload = new ChatPayload(systemPrompt, history, userMessage);
+        ChatPayload payload = new ChatPayload(systemPrompt, history, userMessage);
 
-        return null;
+        ExternalResponse externalResponse = restClient.post()
+                .uri("http://localhost:1234/v1/chat/completions")
+                .body(payload)
+                .retrieve()
+                .body(ExternalResponse.class);
+
+        memoryService.addUserMessage(chatRequest.sessionId(), userMessage);
+
+        memoryService.addAssistantMessage(chatRequest.sessionId(), externalResponse.reply());
+
+        return new ChatResponse(externalResponse.reply());
     }
     public record ChatPayload(
             String systemPrompt,
             List<ChatMessage> history,
             String userMessage
     ){}
-//    hämta system prompt baserat på personality
-//    hämta historik från MemoryService
-//    bygga payload till modellen
-//    skicka HTTP‑request till OpenRouter/LM Studio
-//    ta emot deras HTTP‑response
-//    spara historik
-//    skapa ChatResponse
+    public record ExternalResponse(String reply){}
 }
