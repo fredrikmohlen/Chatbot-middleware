@@ -11,16 +11,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class ChatController {
 
     private final ChatService chatService;
+
     public ChatController(ChatService chatService) {
         this.chatService = chatService;
     }
     @PostMapping("/chat")
     public ChatResponse chat(@RequestBody ChatRequest request){
-
-        // kolla personality
-        // kolla id
-        // spara i MemoryService?
-        // skicka allt till AI?
-        // få tillbaka svaret i ChatResponse?
+        return chatService.chat(request);
     }
 }

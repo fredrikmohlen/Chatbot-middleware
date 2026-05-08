@@ -5,6 +5,7 @@ import org.example.promptgatewaylabfm.controller.ChatResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -23,29 +24,36 @@ public class ChatService {
     public ChatResponse chat(ChatRequest chatRequest) {
 
         String systemPrompt = personalityService.getSystemPrompt(chatRequest.personality());
+        List<ChatMessage> fullMessages = new ArrayList<>();
 
-        var history = memoryService.getHistory(chatRequest.sessionId());
+        fullMessages.add(new ChatMessage("system", systemPrompt));
 
-        String userMessage = chatRequest.message();
+        fullMessages.addAll(memoryService.getHistory(chatRequest.sessionId()));
 
-        ChatPayload payload = new ChatPayload(systemPrompt, history, userMessage);
+        fullMessages.add(new ChatMessage("user", chatRequest.message()));
 
-        ExternalResponse externalResponse = restClient.post()
-                .uri("http://localhost:1234/v1/chat/completions")
-                .body(payload)
+        ExternalResponse response = restClient.post()
+                .uri("/chat/completions")
+                .body(new OpenRouterRequest("openrouter/owl-alpha", fullMessages))
                 .retrieve()
                 .body(ExternalResponse.class);
 
-        memoryService.addUserMessage(chatRequest.sessionId(), userMessage);
+                //free AI-bots:openrouter/free
 
-        memoryService.addAssistantMessage(chatRequest.sessionId(), externalResponse.reply());
+        String aiReply = (response != null && !response.choices().isEmpty())
+                ? response.choices().getFirst().message().content()
+                : "I didn't get an answer from the AI";
 
-        return new ChatResponse(externalResponse.reply());
+        memoryService.addUserMessage(chatRequest.sessionId(), chatRequest.message());
+        memoryService.addAssistantMessage(chatRequest.sessionId(),  aiReply);
+
+        return new ChatResponse(aiReply);
     }
-    public record ChatPayload(
-            String systemPrompt,
-            List<ChatMessage> history,
-            String userMessage
+    public record OpenRouterRequest(
+            String model,
+            List<ChatMessage> messages
     ){}
-    public record ExternalResponse(String reply){}
+    public record ExternalResponse(List<Choice> choices){
+        public record Choice(ChatMessage message){}
+    }
 }
