@@ -1,5 +1,7 @@
 package org.example.promptgatewaylabfm.service;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.example.promptgatewaylabfm.controller.ChatRequest;
 import org.example.promptgatewaylabfm.controller.ChatResponse;
 import org.springframework.stereotype.Service;
@@ -20,7 +22,8 @@ public class ChatService {
         this.personalityService = personalityService;
         this.restClient = restClient;
     }
-
+    @CircuitBreaker(name = "chatService", fallbackMethod = "fallback")
+    @Retry(name = "chatService")
     public ChatResponse chat(ChatRequest chatRequest) {
 
         String systemPrompt = personalityService.getSystemPrompt(chatRequest.personality());
@@ -36,6 +39,10 @@ public class ChatService {
                 .uri("/chat/completions")
                 .body(new OpenRouterRequest("openrouter/owl-alpha", fullMessages))
                 .retrieve()
+                .onStatus(s -> s.value() == 429 || s.value() == 500,
+                        (req, resp) -> {
+                    throw new RetryableHttpException("AI service not responding, trying again");
+                        })
                 .body(ExternalResponse.class);
 
                 //free AI-bots:openrouter/free
@@ -49,6 +56,11 @@ public class ChatService {
 
         return new ChatResponse(aiReply);
     }
+    // Optional: What to do if all retries fail
+    public String fallback(Exception e) {
+        return "Fallback!" + e.getMessage();
+    }
+
     public record OpenRouterRequest(
             String model,
             List<ChatMessage> messages
