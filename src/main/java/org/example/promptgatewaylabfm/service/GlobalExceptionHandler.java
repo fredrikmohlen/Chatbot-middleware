@@ -13,6 +13,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleException(Exception e) {
         return ResponseEntity.status(500).body(Map.of(
                 "status","Error",
-                "message","AI-Service unresponsive: " + e.getMessage()));
+                "message","AI service is currently unavailable. Please try again later."));
+
     }
 }
