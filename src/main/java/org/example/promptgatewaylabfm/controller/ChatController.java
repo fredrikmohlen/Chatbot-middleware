@@ -1,6 +1,7 @@
 package org.example.promptgatewaylabfm.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import org.example.promptgatewaylabfm.service.ChatService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,7 +20,7 @@ public class ChatController {
 
     @PostMapping("/chat")
     @Operation(summary = "Send a chat message", description = "Sends a message to the AI...")
-    public ChatResponse chat(@RequestBody ChatRequest request){
+    public ChatResponse chat(@Valid @RequestBody ChatRequest request){
         return chatService.chat(request);
     }
 }
