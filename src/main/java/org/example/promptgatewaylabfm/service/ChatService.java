@@ -37,6 +37,7 @@ public class ChatService {
 
         ExternalResponse response = restClient.post()
                 .uri("/chat/completions")
+                // Ai - model name from open router
                 .body(new OpenRouterRequest("openrouter/owl-alpha", fullMessages))
                 .retrieve()
                 .onStatus(s -> s.value() == 429 || s.value() == 500,
@@ -57,8 +58,8 @@ public class ChatService {
         return new ChatResponse(aiReply);
     }
     // Optional: What to do if all retries fail
-    public String fallback(Exception e) {
-        return "Fallback!" + e.getMessage();
+    public ChatResponse fallback(ChatRequest request, Exception e) {
+        return new ChatResponse("Fallback! " + e.getMessage());
     }
 
     public record OpenRouterRequest(
