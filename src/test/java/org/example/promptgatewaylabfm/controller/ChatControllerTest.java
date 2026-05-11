@@ -50,6 +50,8 @@ class ChatControllerTest {
         mockMvc.perform(post("/api/v1/chat")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
-                .andExpect(status().isBadRequest()); // Vi förväntar oss 400 Bad Request
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("Bad Request"))
+                .andExpect(jsonPath("$.message").exists());
     }
 }

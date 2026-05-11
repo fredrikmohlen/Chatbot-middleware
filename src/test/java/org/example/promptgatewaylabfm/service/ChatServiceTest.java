@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 class ChatServiceTest {
@@ -45,14 +46,20 @@ class ChatServiceTest {
     @Test
     void chat_shouldReturnAiResponseAndSaveToMemory() {
         ChatRequest request = new ChatRequest("pirate", "Hello", "session-123");
+        String systemPrompt = "You are a pirate";
+        ChatMessage historyMessage = new ChatMessage("assistant", "Old context");
 
-        when(personalityService.getSystemPrompt("pirate")).thenReturn("You are a pirate");
+        when(personalityService.getSystemPrompt("pirate")).thenReturn(systemPrompt);
 
-        when(memoryService.getHistory("session-123")).thenReturn(List.of());
+        when(memoryService.getHistory("session-123")).thenReturn(List.of(historyMessage));
 
         when(restClient.post()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.body(any(ChatService.OpenRouterRequest.class))).thenReturn(requestBodySpec);
+
+        ArgumentCaptor<ChatService.OpenRouterRequest> requestCaptor =
+                ArgumentCaptor.forClass(ChatService.OpenRouterRequest.class);
+
+        when(requestBodySpec.body(requestCaptor.capture())).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
 
@@ -61,9 +68,21 @@ class ChatServiceTest {
         );
         when(responseSpec.body(ChatService.ExternalResponse.class)).thenReturn(fakeResponse);
 
+        // 2. ACT
         ChatResponse result = chatService.chat(request);
 
+        // 3. ASSERT
         assertEquals("Ahoy!", result.reply());
+
+        ChatService.OpenRouterRequest capturedPayload = requestCaptor.getValue();
+        List<ChatMessage> messages = capturedPayload.messages();
+
+        assertEquals(3, messages.size(), "Payload should contain system prompt, history and new message");
+        assertEquals("system", messages.get(0).role());
+        assertEquals(systemPrompt, messages.get(0).content());
+        assertEquals("assistant", messages.get(1).role()); // Historiken
+        assertEquals("user", messages.get(2).role());
+        assertEquals("Hello", messages.get(2).content());
 
         verify(memoryService).addUserMessage("session-123", "Hello");
         verify(memoryService).addAssistantMessage("session-123", "Ahoy!");

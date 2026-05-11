@@ -1,5 +1,7 @@
 package org.example.promptgatewaylabfm.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -10,6 +12,7 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
@@ -21,9 +24,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RetryableHttpException.class)
     public ResponseEntity<Map<String, String>> handleAiRetryError(RetryableHttpException e) {
+        logger.warn("Retryable downstream error", e);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
                 "status", "Service Unavailable",
-                "message", e.getMessage()
+                "message", "AI service is temporarily unavailable. Please try again later."
+
         ));
     }
 
