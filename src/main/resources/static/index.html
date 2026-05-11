@@ -33,7 +33,7 @@
 
 <div id="chat-container">
     <div id="header">
-        <label>Välj AI-personlighet:</label>
+        <label for="personality-select">Välj AI-personlighet:</label>
         <select id="personality-select">
             <option value="friendly">Vänlig Assistent (Standard)</option>
             <option value="pirate">Arg Pirat (Arrr!)</option>
@@ -46,7 +46,7 @@
     </div>
 
     <div id="input-area">
-        <input type="text" id="user-input" placeholder="Skriv ett meddelande..." autocomplete="off">
+        <input type="text" id="user-input" aria-label="Meddelande" placeholder="Skriv ett meddelande..." autocomplete="off">
         <button id="send-btn">Skicka</button>
     </div>
 </div>
@@ -60,7 +60,10 @@
     // Generera en unik sessionID för denna flik
     const sessionId = "session-" + Math.random().toString(36).substring(7);
 
+    let isSending = false;
+
     async function sendMessage() {
+        if (isSending) return;
         const message = userInput.value.trim();
         const personality = personalitySelect.value; // Hämta vald personlighet
 
@@ -70,6 +73,7 @@
         appendMessage(message, 'user-message');
         userInput.value = '';
 
+        isSending = true;
         sendBtn.disabled = true;
         const typingIndicator = appendMessage('AI:n tänker...', 'ai-message typing');
 
@@ -90,10 +94,13 @@
             }
 
             const data = await response.json();
+            const reply = (typeof data?.reply === 'string' && data.reply.trim())
+                ? data.reply
+                : "Fel: ogiltigt svar från servern.";
 
             // 3. Ta bort laddnings-text och visa svaret
             typingIndicator.remove();
-            appendMessage(data.reply, 'ai-message');
+            appendMessage(reply, 'ai-message');
 
         } catch (error) {
             typingIndicator.remove();
@@ -101,6 +108,7 @@
             console.error("Error:", error);
         } finally {
             sendBtn.disabled = false;
+            isSending = false;
         }
     }
 
