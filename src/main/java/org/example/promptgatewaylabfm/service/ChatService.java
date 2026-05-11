@@ -47,7 +47,7 @@ public class ChatService {
         ExternalResponse response = restClient.post()
                 .uri("/chat/completions")
                 // Ai - model name from open router
-                .body(new OpenRouterRequest("openrouter/owl-alpha", fullMessages))
+                .body(new OpenRouterRequest("openrouter/free", fullMessages))
                 .retrieve()
                 .onStatus(s -> s.value() == 429 || s.is5xxServerError(),
                         (req, resp) -> {
