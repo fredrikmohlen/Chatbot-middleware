@@ -1,17 +1,20 @@
-<h1>Small chatbot application</h1>
+<h2>Small chatbot application</h2>
 
-Created with Java and Spring Boot
+Built with Java and Spring Boot
 
-<h3>How to run the application</h3>
-Clone the repository. 
+**How to run the application:**
+1. Clone the repository to your Intellij IDEA. 
 
-Write which AI you want to talk to in the "application.properties" after "ai.model.name= ... ".
+2. **Configure the Model**: Open src/main/resources/application.properties and set the desired AI model after ai.model.name= (e.g., ai.model.name=openrouter/free).
 
-You also need an API-key. Go to "Edit configurations" and enter an "Environment variable" as:
+3. **Add your API Key**: * In your IDE (e.g., IntelliJ), go to **Edit Configurations**.
 
-"OPENROUTER_KEY={write/paste your API-key here}"
+    - Add an **Environment Variable**: OPENROUTER_KEY={your_api_key_here}.
 
-Then you can start the application and either go to: 
-- Swagger at http://localhost:8080/swagger-ui/index.html. \
-or 
-- http://localhost:8080/ - and start chatting in a chatwindow.
+4. **Launch**: Start the application.
+
+**How to use:**
+
+- **Web Interface**: Go to http://localhost:8080/ to start chatting in the UI.
+
+- **API Documentation**: Access the Swagger UI at http://localhost:8080/swagger-ui/index.html.
