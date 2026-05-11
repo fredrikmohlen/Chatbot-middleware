@@ -4,6 +4,7 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.example.promptgatewaylabfm.controller.ChatRequest;
 import org.example.promptgatewaylabfm.controller.ChatResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,11 +20,13 @@ public class ChatService {
     private final MemoryService memoryService;
     private final PersonalityService personalityService;
     private final RestClient restClient;
+    private final String modelName;
 
-    public ChatService(MemoryService memoryService, PersonalityService personalityService, RestClient restClient) {
+    public ChatService(MemoryService memoryService, PersonalityService personalityService, RestClient restClient, @Value("${ai.model.name}") String modelName) {
         this.memoryService = memoryService;
         this.personalityService = personalityService;
         this.restClient = restClient;
+        this.modelName = modelName;
     }
 
     @CircuitBreaker(name = "chatService", fallbackMethod = "fallback")
@@ -47,15 +50,13 @@ public class ChatService {
         ExternalResponse response = restClient.post()
                 .uri("/chat/completions")
                 // Ai - model name from open router
-                .body(new OpenRouterRequest("openrouter/owl-alpha", fullMessages))
+                .body(new OpenRouterRequest(this.modelName, fullMessages))
                 .retrieve()
                 .onStatus(s -> s.value() == 429 || s.is5xxServerError(),
                         (req, resp) -> {
                             throw new RetryableHttpException("AI service not responding, trying again");
                         })
                 .body(ExternalResponse.class);
-
-        //free AI-bots:openrouter/free
 
         String aiReply = (response != null && !response.choices().isEmpty())
                 ? response.choices().getFirst().message().content()

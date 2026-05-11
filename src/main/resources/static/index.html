@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Prompt Gateway</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+
+        #chat-container { width: 450px; height: 650px; background: white; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+
+        /* Ny styling för personlighetsväljaren */
+        #header { padding: 15px; background: #0084ff; color: white; display: flex; flex-direction: column; gap: 8px; }
+        #header label { font-size: 12px; font-weight: bold; text-transform: uppercase; opacity: 0.9; }
+        #personality-select { padding: 8px; border-radius: 8px; border: none; background: rgba(255,255,255,0.2); color: white; outline: none; cursor: pointer; font-size: 14px; }
+        #personality-select option { color: black; }
+
+        #chat-window { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #fafafa; }
+
+        .message { max-width: 80%; padding: 10px 15px; border-radius: 15px; font-size: 14px; line-height: 1.4; }
+        .user-message { align-self: flex-end; background: #0084ff; color: white; border-bottom-right-radius: 2px; }
+        .ai-message { align-self: flex-start; background: #e4e6eb; color: #050505; border-bottom-left-radius: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+        #input-area { padding: 15px; display: flex; gap: 10px; background: white; border-top: 1px solid #eee; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        button { background: #0084ff; color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        button:hover { background: #0073de; }
+        button:disabled { background: #ccc; }
+        .typing { font-style: italic; color: #888; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div id="chat-container">
+    <div id="header">
+        <label for="personality-select">Välj AI-personlighet:</label>
+        <select id="personality-select">
+            <option value="friendly">Vänlig Assistent (Standard)</option>
+            <option value="pirate">Arg Pirat (Arrr!)</option>
+            <option value="coder">Senior Programmerare (Code Review)</option>
+        </select>
+    </div>
+
+    <div id="chat-window">
+        <div class="message ai-message">Välkommen! Välj en personlighet ovan och börja chatta.</div>
+    </div>
+
+    <div id="input-area">
+        <input type="text" id="user-input" aria-label="Meddelande" placeholder="Skriv ett meddelande..." autocomplete="off">
+        <button id="send-btn">Skicka</button>
+    </div>
+</div>
+
+<script>
+    const chatWindow = document.getElementById('chat-window');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const personalitySelect = document.getElementById('personality-select');
+
+    // Generera en unik sessionID för denna flik
+    const sessionId = "session-" + Math.random().toString(36).substring(7);
+
+    let isSending = false;
+
+    async function sendMessage() {
+        if (isSending) return;
+        const message = userInput.value.trim();
+        const personality = personalitySelect.value; // Hämta vald personlighet
+
+        if (!message) return;
+
+        // 1. Visa användarens meddelande
+        appendMessage(message, 'user-message');
+        userInput.value = '';
+
+        isSending = true;
+        sendBtn.disabled = true;
+        const typingIndicator = appendMessage('AI:n tänker...', 'ai-message typing');
+
+        try {
+            // 2. Skicka till din Spring Boot Controller
+            const response = await fetch('/api/v1/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    personality: personality,
+                    message: message,
+                    sessionId: sessionId
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error("Serverfel: " + response.status);
+            }
+
+            const data = await response.json();
+            const reply = (typeof data?.reply === 'string' && data.reply.trim())
+                ? data.reply
+                : "Fel: ogiltigt svar från servern.";
+
+            // 3. Ta bort laddnings-text och visa svaret
+            typingIndicator.remove();
+            appendMessage(reply, 'ai-message');
+
+        } catch (error) {
+            typingIndicator.remove();
+            appendMessage("Fel: AI-tjänsten kunde inte nås. Försök igen.", 'ai-message');
+            console.error("Error:", error);
+        } finally {
+            sendBtn.disabled = false;
+            isSending = false;
+        }
+    }
+
+    function appendMessage(text, className) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${className}`;
+        msgDiv.innerText = text;
+        chatWindow.appendChild(msgDiv);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        return msgDiv;
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+</script>
+
+</body>
+</html>
